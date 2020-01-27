@@ -14,7 +14,8 @@ def similarity(corpus):
                                    min_df=2,
                                    stop_words="english")
     tfidf = tfidf_vectorizer.fit_transform(corpus)
-    return squareform(pdist(tfidf.todense(), "cosine"))
+    tfidf_with_other = np.hstack((tfidf.todense(), np.ones((tfidf.shape[0], 1))))
+    return squareform(pdist(tfidf_with_other, "cosine"))
 
 def optimize(similarity):
     num_people = similarity.shape[0]
