@@ -1,11 +1,17 @@
 from itertools import combinations
 
+import csv
 import numpy as np
 import pandas as pd
 from pulp import *
 from scipy.optimize import linprog
 import spacy
 
+
+FORM = "Engineering Secret Snowflake 2019 (Responses) - Form Responses 1.csv"
+ID_COL = "Email Address"
+PARTICIPATE_COL = "Do you want to participate in Engineering's Secret Snowflake?"
+INTERESTS_COL = "List 4 facts about yourself to help your secret snowflake find the perfect gift for you! "
 
 def similarity(df):
     nlp = spacy.load("en_core_web_md")
@@ -15,7 +21,7 @@ def similarity(df):
     'interested', 'interesting', 'into', 'like', 'love', 'lover', 'need', 
     'preferably','obsessed','really'])
 
-    corpus = df["List 4 facts about yourself to help your secret snowflake find the perfect gift for you! "]
+    corpus = df[INTERESTS_COL]
     spacy_corpus = corpus.apply(nlp)
     for i, sentence in enumerate(spacy_corpus):
         new_sentence = []
@@ -64,21 +70,28 @@ def optimize(similarity):
     return lp_vars, prob.solve()
 
 if __name__ == "__main__":
-    df = pd.read_csv("Engineering Secret Snowflake 2019 (Responses) - Form Responses 1.csv")
-    going = df.loc[df["Do you want to participate in Engineering's Secret Snowflake?"] == "Yes", ["Email Address", "List 4 facts about yourself to help your secret snowflake find the perfect gift for you! "]].reset_index(drop=True)
+    df = pd.read_csv(FORM)
+    going = df.loc[df[PARTICIPATE_COL] == "Yes", [ID_COL, INTERESTS_COL]].reset_index(drop=True)
 
     interest_similarity = similarity(going)
     lp_vars, result = optimize(interest_similarity)
 
     print(LpStatus[result])
-    members = going["Email Address"]
+    members = going[ID_COL]
     num_people = len(members)
     check = 0
     matching = pd.DataFrame(columns = ["Giver", "Receiver", "Giver's interests", "Receiver's Interests"])
     for i, g in enumerate(members):
         for j, r in enumerate(members):
             if lp_vars[i * num_people + j].varValue  >= 0.95:
-                matching = matching.append({"Giver": g, "Receiver": r, "Giver's interests": going.loc[i, "List 4 facts about yourself to help your secret snowflake find the perfect gift for you! "], "Receiver's Interests": going.loc[j, "List 4 facts about yourself to help your secret snowflake find the perfect gift for you! "]}, ignore_index = True)
+                matching = matching.append(
+                    {
+                        "Giver": g, 
+                        "Receiver": r, 
+                        "Giver's interests": going.loc[i, INTERESTS_COL], 
+                        "Receiver's Interests": going.loc[j, INTERESTS_COL]
+                    }, 
+                    ignore_index = True)
                 check += 1
-    matching.to_csv("matching.csv",index = False, quoting=true)
+    matching.to_csv("matching.csv",index = False, quoting=csv.QUOTE_ALL)
     print(f"{check} number of snowflakes matched")
