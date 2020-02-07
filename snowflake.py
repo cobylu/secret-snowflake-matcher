@@ -4,7 +4,6 @@ import csv
 import numpy as np
 import pandas as pd
 from pulp import *
-from scipy.optimize import linprog
 import spacy
 
 
